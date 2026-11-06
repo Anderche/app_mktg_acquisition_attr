@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": ".venv/bin/uvicorn",
+      "runtimeArgs": ["api.main:app", "--port", "8010"],
+      "port": 8010,
+      "autoPort": false
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "web", "dev"],
+      "env": { "API_PROXY_TARGET": "http://localhost:8010" },
+      "port": 5173
+    }
+  ]
+}

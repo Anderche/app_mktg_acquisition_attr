@@ -1,0 +1,25 @@
+services:
+  api:
+    build: .
+    environment:
+      ETL_SOURCE: ${ETL_SOURCE:-synthetic}
+      CORS_ORIGINS: http://localhost:8080
+    volumes:
+      - analytics-data:/app/data
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      start_period: 60s
+
+  web:
+    build: ./web
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  analytics-data:

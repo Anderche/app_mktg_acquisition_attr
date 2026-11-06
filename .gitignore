@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Data (rebuilt by `make etl`)
+data/*.duckdb
+data/*.duckdb.wal
+data/*.parquet
+data/*.tmp
+
+# Web
+web/node_modules/
+web/dist/
+web/coverage/
+*.tsbuildinfo
+
+# Env / secrets
+.env
+*.json.key
+service-account*.json
+
+.DS_Store
