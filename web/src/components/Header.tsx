@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from "react";
 import { useMeta } from "../queries";
 import type { Mode } from "../theme";
 import { ActiveFilters } from "./ActiveFilters";
-import { APP_NAME, AUTHOR } from "./Credit";
+import { APP_NAME, AUTHOR, GitHubIcon, REPO_URL } from "./Credit";
 import { FilterControls, FilterSheet } from "./FilterControls";
 import { SectionNav, useActiveSection } from "./SectionNav";
 
@@ -42,6 +42,16 @@ export function Header({ mode, onModeChange }: HeaderProps) {
             <div className="md:hidden">
               <FilterSheet />
             </div>
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Source code on GitHub"
+              title="Source code on GitHub"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-ink-2 hover:bg-surface-2 hover:text-ink"
+            >
+              <GitHubIcon />
+            </a>
             <button
               type="button"
               onClick={() => onModeChange(mode === "dark" ? "light" : "dark")}
