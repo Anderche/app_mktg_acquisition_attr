@@ -18,8 +18,8 @@ export default function App() {
       <FiltersProvider>
         <div className="min-h-screen bg-page font-sans">
           <Header mode={mode} onModeChange={setMode} />
-          <main className="mx-auto grid max-w-[1400px] grid-cols-12 gap-x-4 gap-y-12 px-4 py-8 md:px-6">
-            <div className="col-span-12 grid min-w-0 grid-cols-12 gap-y-6">
+          <main className="mx-auto grid max-w-[1400px] grid-cols-12 gap-x-4 gap-y-12 px-4 py-4 md:px-6 md:py-6">
+            <div className="col-span-12 grid min-w-0 grid-cols-12 gap-y-3">
               <Intro />
               <ReferenceTiles />
             </div>

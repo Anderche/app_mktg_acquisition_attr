@@ -26,6 +26,19 @@
   --shadow-card: 0 1px 2px rgba(11, 11, 11, 0.04), 0 6px 16px -6px rgba(11, 11, 11, 0.08);
   /* Height of the sticky header; set from JS so in-page anchors land below it. */
   --header-h: 0px;
+  /* Section pastels (UI only; ink text on them is >= 12:1). */
+  --hue-sky: #e4f0fb;
+  --hue-sky-edge: #9cc4ea;
+  --hue-mint: #dcf2e8;
+  --hue-mint-edge: #8fd0b2;
+  --hue-lavender: #ebe7fb;
+  --hue-lavender-edge: #b7aaf0;
+  --hue-peach: #fde6d8;
+  --hue-peach-edge: #f2b08c;
+  --hue-butter: #faf0c8;
+  --hue-butter-edge: #e2c55a;
+  --hue-rose: #fbe2ea;
+  --hue-rose-edge: #eaa1b8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,6 +62,18 @@
     --chip-active-bg: #f0efec;
     --chip-active-text: #1a1a19;
     --shadow-card: none;
+    --hue-sky: #182634;
+    --hue-sky-edge: #3d6a96;
+    --hue-mint: #152b23;
+    --hue-mint-edge: #357a5c;
+    --hue-lavender: #231f36;
+    --hue-lavender-edge: #6a5cb4;
+    --hue-peach: #33221a;
+    --hue-peach-edge: #9a5f40;
+    --hue-butter: #2f2a16;
+    --hue-butter-edge: #8c7633;
+    --hue-rose: #331d25;
+    --hue-rose-edge: #9a5068;
   }
 }
 
@@ -72,6 +97,18 @@
   --chip-active-bg: #f0efec;
   --chip-active-text: #1a1a19;
   --shadow-card: none;
+  --hue-sky: #182634;
+  --hue-sky-edge: #3d6a96;
+  --hue-mint: #152b23;
+  --hue-mint-edge: #357a5c;
+  --hue-lavender: #231f36;
+  --hue-lavender-edge: #6a5cb4;
+  --hue-peach: #33221a;
+  --hue-peach-edge: #9a5f40;
+  --hue-butter: #2f2a16;
+  --hue-butter-edge: #8c7633;
+  --hue-rose: #331d25;
+  --hue-rose-edge: #9a5068;
 }
 
 html,
@@ -102,6 +139,124 @@ footer[id] {
 @supports not (backdrop-filter: blur(1px)) {
   .header-glass {
     background: var(--page);
+  }
+}
+
+/* Phone filter sheet: a native <dialog> pinned to the bottom edge. */
+.filter-sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 20px 20px 0 0;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  padding: 0 0 env(safe-area-inset-bottom);
+}
+.filter-sheet::backdrop {
+  background: rgba(11, 11, 11, 0.45);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .filter-sheet[open] {
+    animation: sheet-up 180ms ease-out;
+  }
+}
+/* Slide only: an opacity fade would leave the sheet see-through if the
+   animation is paused (e.g. a throttled background tab). */
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+  }
+}
+
+/* Tables inside a narrow container (< 440px, i.e. phones; the desktop channel
+   table card is ~500px) become stacked rows: the first cell is the row title,
+   the rest show their column name from data-label. */
+@container (max-width: 439px) {
+  .stack-table {
+    min-width: 0 !important;
+  }
+  .stack-table thead {
+    display: none;
+  }
+  .stack-table,
+  .stack-table tbody {
+    display: block;
+  }
+  .stack-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.375rem 1rem;
+    padding: 0.75rem 0;
+  }
+  .stack-table td {
+    padding: 0 !important;
+    text-align: left !important;
+  }
+  .stack-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.6875rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .stack-table td:first-child {
+    grid-column: 1 / -1;
+    font-weight: 600;
+  }
+  .stack-table td:first-child::before,
+  .stack-table td[colspan]::before {
+    display: none;
+  }
+  .stack-table td[colspan] {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Users who ask for more contrast get firmer lines and darker secondary text. */
+@media (prefers-contrast: more) {
+  :root {
+    --border: rgba(11, 11, 11, 0.45);
+    --hairline: #9a988f;
+    --text-secondary: #2e2d2b;
+    --text-muted: #45443f;
+  }
+  :root[data-theme="dark"] {
+    --border: rgba(255, 255, 255, 0.45);
+    --hairline: #6b6a64;
+    --text-secondary: #e0dfda;
+    --text-muted: #c8c7bf;
+  }
+}
+
+/* Print: light theme, no chrome, cards kept whole. */
+@media print {
+  :root,
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --page: #ffffff;
+    --surface-1: #ffffff;
+    --surface-2: #f3f3f0;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --shadow-card: none;
+  }
+  header,
+  .filter-sheet,
+  [data-print="hide"] {
+    display: none !important;
+  }
+  section,
+  article,
+  .rounded-card {
+    break-inside: avoid;
   }
 }
 

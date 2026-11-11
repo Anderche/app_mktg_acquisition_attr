@@ -1,11 +1,21 @@
 import { BarChart, LineChart, SankeyChart } from "echarts/charts";
-import { AriaComponent, GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
+import { AriaComponent, GridComponent, LegendComponent, MarkAreaComponent, TooltipComponent } from "echarts/components";
 import * as echarts from "echarts/core";
 import { SVGRenderer } from "echarts/renderers";
 import type { EChartsOption } from "echarts";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 
-echarts.use([BarChart, LineChart, SankeyChart, GridComponent, TooltipComponent, LegendComponent, AriaComponent, SVGRenderer]);
+echarts.use([
+  BarChart,
+  LineChart,
+  SankeyChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  MarkAreaComponent,
+  AriaComponent,
+  SVGRenderer,
+]);
 
 interface ChartProps {
   option: EChartsOption;

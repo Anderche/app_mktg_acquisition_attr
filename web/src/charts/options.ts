@@ -3,7 +3,7 @@
 import type { EChartsOption } from "echarts";
 import type { AttributionRow, ChannelRow, DailyPoint, KpiValues, RemovalEffectRow, SankeyResponse } from "../api";
 import { MODELS } from "../api";
-import { fmtInt, fmtPct, fmtUsd, fmtUsdCompact } from "../format";
+import { fmtDelta, fmtInt, fmtPct, fmtUsd, fmtUsdCompact, pctChange } from "../format";
 import { channelColor, MODEL_LABELS, type ChartTheme } from "../theme";
 
 const FONT = '"Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif';
@@ -36,7 +36,17 @@ export function sparklineOption(
   metric: SparkMetric,
   t: ChartTheme,
   format: (n: number) => string,
+  band?: { mean: number; std: number },
 ): EChartsOption {
+  // Shaded mean ± 1σ band behind the line, so a reader sees which days are unusual.
+  const markArea =
+    band && band.std > 0
+      ? {
+          silent: true,
+          itemStyle: { color: t.spark, opacity: 0.12 },
+          data: [[{ yAxis: Math.max(0, band.mean - band.std) }, { yAxis: band.mean + band.std }] as [{ yAxis: number }, { yAxis: number }]],
+        }
+      : undefined;
   return {
     animation: false,
     grid: { left: 2, right: 2, top: 4, bottom: 2 },
@@ -48,7 +58,8 @@ export function sparklineOption(
       axisPointer: { type: "line", lineStyle: { color: t.axis, width: 1 } },
       formatter: (params: unknown) => {
         const p = (params as { axisValue: string; value: number }[])[0];
-        return `<div style="color:${t.muted};font-size:11px">${p.axisValue}</div><b>${format(p.value)}</b>`;
+        const avg = band ? `<div style="color:${t.muted};font-size:11px">mean ${format(band.mean)} ± ${format(band.std)}</div>` : "";
+        return `<div style="color:${t.muted};font-size:11px">${p.axisValue}</div><b>${format(p.value)}</b>${avg}`;
       },
     },
     series: [
@@ -59,7 +70,7 @@ export function sparklineOption(
         smooth: false,
         lineStyle: { width: 1.5, color: t.spark },
         itemStyle: { color: t.spark },
-        areaStyle: { color: t.spark, opacity: 0.08 },
+        ...(markArea ? { markArea } : { areaStyle: { color: t.spark, opacity: 0.08 } }),
       },
     ],
   };
@@ -120,6 +131,22 @@ export function channelRevenueOption(rows: ChannelRow[], t: ChartTheme): ECharts
 
 // --- attribution comparison (grouped bars) ---------------------------------------
 
+/** % change in a channel's credit under `model` relative to last click. */
+export function vsLastClick(r: AttributionRow, model: (typeof MODELS)[number]): number | null {
+  return pctChange(r[model], r.last_click);
+}
+
+/**
+ * The channel the four models disagree on most, relative to its size. Channels
+ * with under 5% of the credit are skipped: on tiny volumes the CV is noise.
+ */
+export function mostDisputed(rows: AttributionRow[]): AttributionRow | null {
+  const mean = (r: AttributionRow) => MODELS.reduce((s, m) => s + r[m], 0) / MODELS.length;
+  const total = rows.reduce((s, r) => s + mean(r), 0);
+  const big = rows.filter((r) => total > 0 && mean(r) >= total * 0.05);
+  return big.length ? big.reduce((a, b) => (b.model_cv > a.model_cv ? b : a)) : null;
+}
+
 export type AttributionMetric = "conversions" | "revenue";
 
 export function attributionOption(
@@ -162,11 +189,11 @@ export function attributionOption(
       formatter: (params: unknown) => {
         const ps = params as { dataIndex: number }[];
         const r = rows[ps[0].dataIndex];
-        const lines = MODELS.map(
-          (m) => `${swatch(t.models[m])}${MODEL_LABELS[m]} <b style="float:right;margin-left:16px">${fmt(r[m])}</b>`,
-        );
-        const shift = r.last_click ? (r.markov - r.last_click) / r.last_click : 0;
-        return `<b>${r.channel}</b><br/>${lines.join("<br/>")}<div style="margin-top:4px;color:${t.muted}">Markov vs last click: ${shift >= 0 ? "+" : "−"}${Math.abs(shift * 100).toFixed(0)}%</div>`;
+        const lines = MODELS.map((m) => {
+          const change = m === "last_click" ? "" : ` <span style="color:${t.muted}">${fmtDelta(vsLastClick(r, m))}</span>`;
+          return `${swatch(t.models[m])}${MODEL_LABELS[m]} <b style="float:right;margin-left:16px">${fmt(r[m])}${change}</b>`;
+        });
+        return `<b>${r.channel}</b><br/>${lines.join("<br/>")}<div style="margin-top:4px;color:${t.muted}">Model spread σ ${fmt(r.model_std)} · CV ${fmtPct(r.model_cv, 0)}</div>`;
       },
     },
     series: MODELS.map((m) => ({
@@ -227,7 +254,8 @@ export function removalEffectsOption(rows: RemovalEffectRow[], t: ChartTheme): E
 
 // --- conversion paths (Sankey) -----------------------------------------------
 
-export function sankeyOption(data: SankeyResponse, t: ChartTheme): EChartsOption {
+export function sankeyOption(data: SankeyResponse, t: ChartTheme, opts: { compact?: boolean } = {}): EChartsOption {
+  const compact = opts.compact ?? false;
   const nodeColor = (channel: string) =>
     channel === "Purchase" ? t.purchase : channelColor(channel, t.mode);
   const byName = new Map(data.nodes.map((n) => [n.name, n]));
@@ -238,6 +266,10 @@ export function sankeyOption(data: SankeyResponse, t: ChartTheme): EChartsOption
     outflow.set(l.source, (outflow.get(l.source) ?? 0) + l.value);
   }
   const shown = data.paths.reduce((s, p) => s + p.conversions, 0);
+  // In the compact preview only label nodes big enough to hold text.
+  const labelled = (name: string, step: number | null) =>
+    !compact || step === null || step === 1 || Math.max(inflow.get(name) ?? 0, outflow.get(name) ?? 0) >= shown * 0.08;
+  const layout = compact ? SANKEY_COMPACT_LAYOUT : SANKEY_LAYOUT;
 
   return {
     animationDuration: 300,
@@ -267,8 +299,8 @@ export function sankeyOption(data: SankeyResponse, t: ChartTheme): EChartsOption
     series: [
       {
         type: "sankey",
-        ...SANKEY_LAYOUT,
-        nodeGap: 10,
+        ...layout,
+        nodeGap: compact ? 6 : 10,
         // "justify" puts every step-n node in column n-1 and the sink (Purchase)
         // in the last column, so columns line up with journey steps.
         nodeAlign: "justify",
@@ -278,11 +310,11 @@ export function sankeyOption(data: SankeyResponse, t: ChartTheme): EChartsOption
         data: data.nodes.map((n) => ({
           name: n.name,
           itemStyle: { color: nodeColor(n.channel), borderColor: t.surface, borderWidth: 1 },
-          label: { formatter: n.step === null ? "Purchase" : n.channel },
+          label: { show: labelled(n.name, n.step), formatter: n.step === null ? "Purchase" : n.channel },
         })),
         links: data.links.map((l) => ({ ...l })),
         lineStyle: { color: "source", opacity: t.mode === "dark" ? 0.35 : 0.28, curveness: 0.5 },
-        label: { color: t.textSecondary, fontFamily: FONT, fontSize: 11 },
+        label: { color: t.textSecondary, fontFamily: FONT, fontSize: compact ? 10 : 11 },
       },
     ],
   };
@@ -290,6 +322,39 @@ export function sankeyOption(data: SankeyResponse, t: ChartTheme): EChartsOption
 
 // Sankey geometry shared with the HTML step headers drawn above the chart.
 export const SANKEY_LAYOUT = { left: 8, right: 96, top: 8, bottom: 8, nodeWidth: 12 } as const;
+const SANKEY_COMPACT_LAYOUT = { left: 4, right: 64, top: 4, bottom: 4, nodeWidth: 10 } as const;
+
+/**
+ * The Sankey for only the top `n` journeys, rebuilt from an already-fetched
+ * response so the hero preview needs no request of its own.
+ */
+export function topPathsSankey(data: SankeyResponse, n: number): SankeyResponse {
+  const paths = data.paths.slice(0, n);
+  const nodes = new Map<string, SankeyResponse["nodes"][number]>();
+  const links = new Map<string, { source: string; target: string; value: number }>();
+  for (const p of paths) {
+    const chain = p.path.split(" > ").map((channel, i) => {
+      const name = `${channel} · ${i + 1}`;
+      if (!nodes.has(name)) nodes.set(name, { name, channel, step: i + 1 });
+      return name;
+    });
+    chain.push("Purchase");
+    for (let i = 0; i < chain.length - 1; i++) {
+      const key = `${chain[i]}→${chain[i + 1]}`;
+      const link = links.get(key) ?? { source: chain[i], target: chain[i + 1], value: 0 };
+      link.value += p.conversions;
+      links.set(key, link);
+    }
+  }
+  if (paths.length) nodes.set("Purchase", { name: "Purchase", channel: "Purchase", step: null });
+  const total = data.total_conversions;
+  return {
+    nodes: [...nodes.values()],
+    links: [...links.values()].map((l) => ({ ...l, share: total ? l.value / total : 0 })),
+    paths,
+    total_conversions: total,
+  };
+}
 
 /** Deepest journey step present; Purchase sits one column to its right. */
 export function sankeyMaxStep(data: SankeyResponse): number {

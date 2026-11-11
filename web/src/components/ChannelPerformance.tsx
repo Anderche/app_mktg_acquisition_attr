@@ -7,6 +7,7 @@ import { channelColor, useChartTheme } from "../theme";
 import { Card, CardTitle, ChannelDot, ErrorNote, Section, Skeleton } from "./Card";
 import { Chart } from "./Chart";
 import { SortHeader, useSort } from "./sort";
+import { useChartHeight } from "../useMediaQuery";
 
 type Col = keyof Omit<ChannelRow, "channel"> | "channel";
 
@@ -25,6 +26,7 @@ export function ChannelPerformance() {
   const [sort, setSort] = useState<{ key: Col; dir: "asc" | "desc" }>({ key: "revenue", dir: "desc" });
   const rows = useSort(data ?? [], sort);
   const option = useMemo(() => (data ? channelRevenueOption(data, t) : null), [data, t]);
+  const height = useChartHeight(240, 280);
 
   return (
     <Section id="channels" title="Channel performance" subtitle="Each session's source/medium mapped to a default channel group. Follows the filters above.">
@@ -34,14 +36,14 @@ export function ChannelPerformance() {
         <div className="grid grid-cols-12 gap-3">
           <Card busy={isPlaceholderData} className="col-span-12 lg:col-span-7">
             <CardTitle hint="Session revenue">Revenue by channel</CardTitle>
-            {isPending || !option ? <Skeleton height={280} /> : <Chart option={option} height={280} label="Horizontal bar chart of revenue by channel" />}
+            {isPending || !option ? <Skeleton height={height} /> : <Chart option={option} height={height} label="Horizontal bar chart of revenue by channel" />}
           </Card>
-          <Card busy={isPlaceholderData} className="col-span-12 overflow-x-auto lg:col-span-5">
+          <Card busy={isPlaceholderData} className="@container col-span-12 overflow-x-auto lg:col-span-5">
             <CardTitle>Channel table</CardTitle>
             {isPending ? (
-              <Skeleton height={280} />
+              <Skeleton height={height} />
             ) : (
-              <table className="tabular w-full min-w-[440px] text-sm">
+              <table className="stack-table tabular w-full min-w-[440px] text-sm">
                 <thead>
                   <tr className="border-b border-hairline text-left text-xs text-muted">
                     {COLUMNS.map((c) => (
@@ -53,7 +55,7 @@ export function ChannelPerformance() {
                   {rows.map((r) => (
                     <tr key={r.channel} className="border-b border-hairline last:border-0">
                       {COLUMNS.map((c) => (
-                        <td key={c.key} className={`py-2 ${c.numeric ? "pl-3 text-right text-ink-2" : "pr-2 text-ink"}`}>
+                        <td key={c.key} data-label={c.label} className={`py-2 ${c.numeric ? "pl-3 text-right text-ink-2" : "pr-2 text-ink"}`}>
                           {c.key === "channel" && <ChannelDot color={channelColor(r.channel, t.mode)} />}
                           {c.format(r)}
                         </td>

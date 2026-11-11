@@ -1,4 +1,4 @@
-# Touchline — Acquisition & Attribution Dashboard
+# Touchline by Anders Kiss — Acquisition & Attribution Dashboard
 
 A single-page analytics app that shows how each acquisition channel drives users, conversions and revenue for an online retailer, and how credit for those conversions shifts between last-click, first-click, linear and Markov-chain attribution.
 

@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { REFERENCE_TILES } from "../content/reference";
 import { SECTIONS } from "../sections";
-import { HIDE_KEY, ReferenceTiles } from "./ReferenceTiles";
+import { OPEN_KEY, ReferenceTiles } from "./ReferenceTiles";
 
 const META = {
   source: "bigquery",
@@ -35,30 +35,37 @@ describe("<ReferenceTiles>", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it("shows the three tiles and live source counts", async () => {
+  it("starts collapsed: three chips, no tile content", async () => {
     renderTiles();
-    expect(screen.getByRole("heading", { name: "Source data" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "How it extends to your data" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Who it helps" })).toBeInTheDocument();
-
-    const source = screen.getByRole("article", { name: "Source data" });
-    expect(await within(source).findByText("360.1K")).toBeInTheDocument();
-    expect(within(source).getByText("4.8K")).toBeInTheDocument();
-    expect(within(source).getByText(/Real BigQuery extract/)).toBeInTheDocument();
+    const chips = screen.getAllByRole("button");
+    expect(chips).toHaveLength(3);
+    for (const chip of chips) expect(chip).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("heading", { name: /Source data/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Source data · 360\.1K sessions/ })).toBeInTheDocument();
   });
 
-  it("hides and remembers the choice", async () => {
+  it("opens a tile in place with live counts, and remembers it", async () => {
     renderTiles();
-    await userEvent.click(screen.getByRole("button", { name: "Hide" }));
-    expect(screen.queryByRole("heading", { name: "Source data" })).not.toBeInTheDocument();
-    expect(localStorage.getItem(HIDE_KEY)).toBe("1");
-    expect(screen.getByRole("button", { name: "Show" })).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(screen.getByRole("button", { name: /Source data/ }));
+    const tile = screen.getByRole("article", { name: /Source data/ });
+    expect(await within(tile).findByText("270.2K")).toBeInTheDocument();
+    expect(within(tile).getByText(/Real BigQuery extract/)).toBeInTheDocument();
+    expect(localStorage.getItem(OPEN_KEY)).toBe("source");
+
+    await userEvent.click(screen.getByRole("button", { name: /Who it helps/ }));
+    expect(screen.queryByRole("article", { name: /Source data/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("article", { name: /Who it helps/ })).toBeInTheDocument();
+    expect(localStorage.getItem(OPEN_KEY)).toBe("audience");
   });
 
-  it("starts hidden when the viewer hid it before", () => {
-    localStorage.setItem(HIDE_KEY, "1");
+  it("closes again and forgets", async () => {
+    localStorage.setItem(OPEN_KEY, "extend");
     renderTiles();
-    expect(screen.queryByRole("heading", { name: "Who it helps" })).not.toBeInTheDocument();
+    const chip = screen.getByRole("button", { name: /How it extends/ });
+    expect(chip).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(chip);
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+    expect(localStorage.getItem(OPEN_KEY)).toBeNull();
   });
 
   it("links every tile to a real section", () => {

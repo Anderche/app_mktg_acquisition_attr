@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { MODELS } from "../api";
-import { attributionOption, removalEffectsOption, type AttributionMetric } from "../charts/options";
-import { fmtInt, fmtPct, fmtUsd } from "../format";
+import { attributionOption, mostDisputed, removalEffectsOption, vsLastClick, type AttributionMetric } from "../charts/options";
+import { fmtDelta, fmtInt, fmtPct, fmtUsd } from "../format";
 import { useAttribution, useRemovalEffects } from "../queries";
 import { channelColor, MODEL_LABELS, useChartTheme } from "../theme";
 import { Card, CardTitle, ChannelDot, ErrorNote, Section, Segmented, Skeleton, TableToggle } from "./Card";
 import { Chart } from "./Chart";
+import { useChartHeight } from "../useMediaQuery";
 
 export function Attribution() {
   const attribution = useAttribution();
@@ -18,6 +19,9 @@ export function Attribution() {
   const option = useMemo(() => (rows ? attributionOption(rows, metric, t) : null), [rows, metric, t]);
   const removalOption = useMemo(() => (removal.data ? removalEffectsOption(removal.data, t) : null), [removal.data, t]);
   const fmt = metric === "revenue" ? fmtUsd : fmtInt;
+  const chartHeight = useChartHeight(260, 300);
+  const removalHeight = useChartHeight(220, 240);
+  const disputed = useMemo(() => (rows ? mostDisputed(rows) : null), [rows]);
 
   // The channel with the largest gain from last click to Markov.
   const biggestGain = useMemo(() => {
@@ -51,10 +55,10 @@ export function Attribution() {
           {attribution.error ? (
             <ErrorNote error={attribution.error} />
           ) : !rows || !option ? (
-            <Skeleton height={300} />
+            <Skeleton height={chartHeight} />
           ) : showTable ? (
-            <div className="overflow-x-auto">
-              <table className="tabular w-full min-w-[520px] text-sm">
+            <div className="@container overflow-x-auto">
+              <table className="stack-table tabular w-full min-w-[600px] text-sm">
                 <caption className="sr-only">Attributed {metric} by channel and model</caption>
                 <thead>
                   <tr className="border-b border-hairline text-left text-xs text-muted">
@@ -64,35 +68,45 @@ export function Attribution() {
                         {MODEL_LABELS[m]}
                       </th>
                     ))}
-                    <th scope="col" className="py-2 pl-3 text-right font-medium">Markov vs last click</th>
+                    <th scope="col" className="py-2 pl-3 text-right font-medium" title="Standard deviation of the four models' credit">
+                      Model spread σ
+                    </th>
+                    <th scope="col" className="py-2 pl-3 text-right font-medium" title="Spread divided by the mean credit">
+                      CV
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => {
-                    const shift = r.last_click ? (r.markov - r.last_click) / r.last_click : 0;
-                    return (
-                      <tr key={r.channel} className="border-b border-hairline last:border-0">
-                        <td className="py-2 text-ink">
-                          <ChannelDot color={channelColor(r.channel, t.mode)} />
-                          {r.channel}
-                        </td>
-                        {MODELS.map((m) => (
-                          <td key={m} className="py-2 pl-3 text-right text-ink-2">
+                  {rows.map((r) => (
+                    <tr key={r.channel} className="border-b border-hairline last:border-0">
+                      <td data-label="Channel" className="py-2 text-ink">
+                        <ChannelDot color={channelColor(r.channel, t.mode)} />
+                        {r.channel}
+                      </td>
+                      {MODELS.map((m) => {
+                        const change = m === "last_click" ? null : vsLastClick(r, m);
+                        return (
+                          <td key={m} data-label={MODEL_LABELS[m]} className="py-2 pl-3 text-right text-ink-2">
                             {fmt(r[m])}
+                            {change !== null && (
+                              <span className={`ml-1 text-xs ${change >= 0 ? "text-good" : "text-bad"}`}>({fmtDelta(change)})</span>
+                            )}
                           </td>
-                        ))}
-                        <td className={`py-2 pl-3 text-right font-medium ${shift >= 0 ? "text-good" : "text-bad"}`}>
-                          {shift >= 0 ? "▲ +" : "▼ −"}
-                          {Math.abs(shift * 100).toFixed(0)}%
-                        </td>
-                      </tr>
-                    );
-                  })}
+                        );
+                      })}
+                      <td data-label="Model spread σ" className="py-2 pl-3 text-right text-ink-2">
+                        {fmt(r.model_std)}
+                      </td>
+                      <td data-label="CV" className="py-2 pl-3 text-right text-ink-2">
+                        {fmtPct(r.model_cv, 0)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <Chart option={option} height={300} label={`Grouped bar chart of attributed ${metric} by channel for four attribution models`} />
+            <Chart option={option} height={chartHeight} label={`Grouped bar chart of attributed ${metric} by channel for four attribution models`} />
           )}
           <p className="mt-3 border-t border-hairline pt-3 text-sm text-ink-2">
             Channels gaining credit under Markov are undervalued by last-click.
@@ -103,6 +117,13 @@ export function Attribution() {
                 {fmt(biggestGain.markov)}.
               </>
             )}
+            {disputed && (
+              <>
+                {" "}
+                The models disagree most on <b className="text-ink">{disputed.channel}</b> (σ {fmt(disputed.model_std)}, CV{" "}
+                {fmtPct(disputed.model_cv, 0)}).
+              </>
+            )}
           </p>
         </Card>
 
@@ -111,9 +132,9 @@ export function Attribution() {
           {removal.error ? (
             <ErrorNote error={removal.error} />
           ) : !removalOption ? (
-            <Skeleton height={240} />
+            <Skeleton height={removalHeight} />
           ) : (
-            <Chart option={removalOption} height={240} label="Bar chart of Markov removal effect share by channel" />
+            <Chart option={removalOption} height={removalHeight} label="Bar chart of Markov removal effect share by channel" />
           )}
           <p className="mt-3 border-t border-hairline pt-3 text-xs text-ink-2">
             Removal effect: the share of conversions lost if a channel were taken out of every journey.

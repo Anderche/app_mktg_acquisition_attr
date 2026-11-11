@@ -1,6 +1,6 @@
 import { fmtInt } from "../format";
 import { useMeta } from "../queries";
-import { eyebrowFor } from "../sections";
+import { Eyebrow } from "./Card";
 import { APP_NAME, AUTHOR, AuthorCredit } from "./Credit";
 
 export function DataNotes() {
@@ -8,9 +8,7 @@ export function DataNotes() {
   return (
     <footer id="data-notes" aria-labelledby="data-notes-title" className="border-t border-hairline bg-surface">
       <div className="mx-auto max-w-[1400px] px-4 pt-10 md:px-6">
-        <p className="mb-1 text-caption font-medium uppercase tracking-[0.08em] text-muted" aria-hidden>
-          {eyebrowFor("data-notes")}
-        </p>
+        <Eyebrow id="data-notes" />
         <h2 id="data-notes-title" className="font-display text-title font-semibold text-ink">
           Sources, method and limits
         </h2>
@@ -70,7 +68,7 @@ export function DataNotes() {
       <div className="border-t border-hairline">
         <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-4 text-sm text-ink-2 md:px-6">
           <span>
-            <b className="font-semibold text-ink">{APP_NAME}</b> · built by {AUTHOR.name}
+            <b className="font-display font-semibold text-ink">{APP_NAME}</b> by {AUTHOR.name}
           </span>
           <AuthorCredit />
         </div>

@@ -24,6 +24,21 @@ class DailyPoint(BaseModel):
     aov: float
 
 
+class MetricStats(BaseModel):
+    """Spread of a KPI's daily values over the selected range."""
+
+    mean: float
+    std: float  # sample standard deviation of the daily values
+    cv: float  # coefficient of variation: std / mean
+    days: int  # days that went into the calculation
+
+
+class PeriodComparison(BaseModel):
+    label: str  # e.g. "Jan 2021 vs Dec 2020"
+    current: KpiValues
+    previous: KpiValues
+
+
 class KpiResponse(BaseModel):
     current: KpiValues
     # None when the previous period falls before the data coverage window.
@@ -31,6 +46,12 @@ class KpiResponse(BaseModel):
     previous_start: date
     previous_end: date
     daily: list[DailyPoint]
+    stats: dict[str, MetricStats]
+    # Last complete month in the range vs the month before; None if unavailable.
+    mom: PeriodComparison | None
+    # Same range one year earlier; None until the data covers it.
+    yoy: PeriodComparison | None
+    yoy_note: str | None
 
 
 class ChannelRow(BaseModel):
@@ -49,6 +70,9 @@ class AttributionRow(BaseModel):
     first_click: float
     linear: float
     markov: float
+    # How much the four models disagree about this channel.
+    model_std: float  # population standard deviation across the models
+    model_cv: float  # model_std / mean credit
 
 
 class AttributionResponse(BaseModel):
