@@ -7,6 +7,9 @@ import pandas as pd
 OBFUSCATED = ("<Other>", "(data deleted)")
 PAID_MEDIUMS = {"cpc", "ppc", "paid"}
 DIRECT_MEDIUMS = {"(none)", "(not set)"}
+# The store's own domains. A "referral" from one of these is a self-referral
+# (checkout redirects, cross-subdomain hops), not an acquisition source.
+OWN_DOMAINS = ("googlemerchandisestore.com",)
 
 CHANNEL_ORDER = [
     "Organic Search",
@@ -16,6 +19,11 @@ CHANNEL_ORDER = [
     "Email",
     "Other / Unknown",
 ]
+
+
+def is_self_referral(source: str) -> bool:
+    host = source.strip().lower()
+    return any(host == d or host.endswith("." + d) for d in OWN_DOMAINS)
 
 
 def channel_for(source: str | None, medium: str | None) -> str:
@@ -28,7 +36,8 @@ def channel_for(source: str | None, medium: str | None) -> str:
     if medium in PAID_MEDIUMS:
         return "Paid Search"
     if medium == "referral":
-        return "Referral"
+        # Treated like GA4's "unwanted referrals": no external source, so Direct.
+        return "Direct" if is_self_referral(source) else "Referral"
     if medium == "email":
         return "Email"
     if source == "(direct)" and medium in DIRECT_MEDIUMS:

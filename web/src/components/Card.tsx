@@ -11,7 +11,7 @@ interface SectionProps {
 
 export function Section({ id, title, subtitle, actions, children, className = "" }: SectionProps) {
   return (
-    <section aria-labelledby={`${id}-title`} className={`col-span-12 min-w-0 ${className}`}>
+    <section id={id} aria-labelledby={`${id}-title`} className={`col-span-12 min-w-0 scroll-mt-40 ${className}`}>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id={`${id}-title`} className="text-base font-semibold text-ink">

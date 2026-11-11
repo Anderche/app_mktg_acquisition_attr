@@ -2,6 +2,7 @@ import { useId, type ReactNode } from "react";
 import { COVERAGE, DATE_PRESETS, presetFor, useFilters } from "../filters";
 import { useMeta } from "../queries";
 import type { Mode } from "../theme";
+import { APP_NAME, AuthorCredit } from "./Credit";
 
 const controlCls =
   "h-9 rounded-lg border border-border bg-surface px-2.5 text-sm text-ink hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
@@ -37,15 +38,16 @@ export function Header({ mode, onModeChange }: HeaderProps) {
       <div className="mx-auto max-w-[1400px] px-4 py-3 md:px-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-lg font-semibold leading-tight text-ink">Acquisition &amp; Attribution</h1>
+            <h1 className="text-lg font-semibold leading-tight text-ink">{APP_NAME}</h1>
             <p className="text-xs text-ink-2">
-              Google Merchandise Store · GA4 ecommerce sample
+              Acquisition &amp; attribution · Google Merchandise Store GA4 sample
               {meta.data?.source === "synthetic" && (
                 <span className="ml-2 whitespace-nowrap rounded bg-surface-2 px-1.5 py-0.5 font-medium text-ink-2">synthetic data</span>
               )}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <AuthorCredit compact />
             <a
               href="#data-notes"
               className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-2"
