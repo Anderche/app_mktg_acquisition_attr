@@ -33,7 +33,10 @@ export function DataNotes() {
         <div>
           <h2 className="mb-2 text-sm font-semibold text-ink">Methodology</h2>
           <ul className="list-disc space-y-1.5 pl-4">
-            <li>One row per GA4 session; each source/medium pair maps to a default channel group.</li>
+            <li>
+              One row per GA4 session, labelled with its landing source/medium, which maps to a default channel group. Referrals
+              from the store’s own domain count as Direct.
+            </li>
             <li>
               Journeys are a user’s sessions in time order, split at each purchase, with a {data?.lookback_days ?? 30}-day lookback
               window.

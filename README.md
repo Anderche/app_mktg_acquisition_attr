@@ -11,6 +11,9 @@ Built on the public **GA4 obfuscated ecommerce sample** (Google Merchandise Stor
 3. Which customer journeys most often end in a purchase?
 4. Which campaigns perform best and worst on revenue and conversion rate?
 
+## Reference
+Google_cloud_project_id: ```railway-app-mktg-acquisition```
+
 ## Quick start
 
 Requires Python 3.11–3.13 with [uv](https://docs.astral.sh/uv/), Node 20+ with pnpm, and a C++ compiler (ChannelAttribution builds from source).
@@ -20,6 +23,14 @@ make install   # uv sync + pnpm install
 make etl       # build data/analytics.duckdb from synthetic GA4-shaped data (~2 s)
 make dev       # API on :8000, dashboard on http://localhost:5173
 ```
+
+`make install` creates `.venv` with `uv sync`. Makefile targets call `uv run`, so `make etl`, `make dev`, and `make test` use that environment without activating it. To run Python, pytest, or a REPL yourself, activate it in the current shell:
+
+```bash
+source .venv/bin/activate
+```
+
+The prompt shows `(.venv)` and `python` points at the project interpreter. Leave it with `deactivate`.
 
 If port 8000 is taken, run `make dev API_PORT=8010`.
 
@@ -70,8 +81,8 @@ All heavy work runs in the batch job. The API only aggregates small DuckDB table
 
 | Step | Module | What it does |
 |---|---|---|
-| 1. Extract | `etl/extract.py` | One row per session: source/medium/campaign, device, country, converted, revenue |
-| 2. Channels | `etl/channels.py` | Rules table → Organic Search, Paid Search, Direct, Referral, Email, Other / Unknown |
+| 1. Extract | `etl/extract.py` | One row per session: landing source/medium/campaign (from the session's first event that has one), device, country, converted, revenue |
+| 2. Channels | `etl/channels.py` | Rules table → Organic Search, Paid Search, Direct, Referral, Email, Other / Unknown. Referrals from the store's own domain (`googlemerchandisestore.com`) are self-referrals and count as Direct, like GA4's unwanted referrals |
 | 3. Paths | `etl/paths.py` | Sort each user's sessions, split at every purchase, apply a 30-day lookback, aggregate to `path / total_conversions / total_conversion_value / total_null` |
 | 4. Models | `etl/attribution.py` | `heuristic_models` + `markov_model(order=1, out_more=True)`; removal effects normalised to shares |
 | 5. Load | `etl/load.py` | Writes every table to a temp DuckDB file, then `os.replace`. If a run fails, the last good file stays in place |

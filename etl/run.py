@@ -23,6 +23,8 @@ LIMITATIONS = {
     "bigquery": [
         "Some source, medium and campaign values are obfuscated in the public sample "
         "('<Other>', '(data deleted)') and are grouped into 'Other / Unknown'.",
+        "Referrals from the store's own domain (googlemerchandisestore.com) are "
+        "self-referrals, not acquisition, and are counted as Direct.",
         "The sample has no ad-spend data, so ROAS and CAC are not shown.",
         "user_pseudo_id is cookie-based, so a journey across devices appears as "
         "separate users.",
