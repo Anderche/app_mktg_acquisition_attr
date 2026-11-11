@@ -20,12 +20,29 @@ export interface DailyPoint extends KpiValues {
   date: string;
 }
 
+export interface MetricStats {
+  mean: number;
+  std: number;
+  cv: number;
+  days: number;
+}
+
+export interface PeriodComparison {
+  label: string;
+  current: KpiValues;
+  previous: KpiValues;
+}
+
 export interface KpiResponse {
   current: KpiValues;
   previous: KpiValues | null;
   previous_start: string;
   previous_end: string;
   daily: DailyPoint[];
+  stats: Record<keyof KpiValues, MetricStats>;
+  mom: PeriodComparison | null;
+  yoy: PeriodComparison | null;
+  yoy_note: string | null;
 }
 
 export interface ChannelRow {
@@ -41,7 +58,7 @@ export interface ChannelRow {
 export const MODELS = ["last_click", "first_click", "linear", "markov"] as const;
 export type Model = (typeof MODELS)[number];
 
-export type AttributionRow = { channel: string } & Record<Model, number>;
+export type AttributionRow = { channel: string; model_std: number; model_cv: number } & Record<Model, number>;
 
 export interface AttributionResponse {
   conversions: AttributionRow[];

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import statistics
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Annotated, Literal
@@ -22,6 +23,8 @@ from api.schemas import (
     KpiResponse,
     KpiValues,
     MetaResponse,
+    MetricStats,
+    PeriodComparison,
     RemovalEffectRow,
     SankeyLink,
     SankeyNode,
@@ -155,6 +158,53 @@ def previous_period(start: date, end: date) -> tuple[date, date]:
     return prev_end - (end - start), prev_end
 
 
+def _add_months(d: date, n: int) -> date:
+    """First day of the month `n` months after d's month."""
+    year, month0 = divmod(d.year * 12 + d.month - 1 + n, 12)
+    return date(year, month0 + 1, 1)
+
+
+def month_over_month(start: date, end: date) -> tuple[tuple[date, date], tuple[date, date]] | None:
+    """The last complete calendar month inside [start, end] and the month before
+    it, or None if there is no complete month or the earlier one has no data."""
+    month_start = end.replace(day=1)
+    if _add_months(month_start, 1) - timedelta(days=1) != end:
+        month_start = _add_months(month_start, -1)
+    month_end = _add_months(month_start, 1) - timedelta(days=1)
+    prev_start = _add_months(month_start, -1)
+    if month_start < start or prev_start < START_DATE:
+        return None
+    return (month_start, month_end), (prev_start, month_start - timedelta(days=1))
+
+
+def year_ago(d: date) -> date:
+    try:
+        return d.replace(year=d.year - 1)
+    except ValueError:  # 29 Feb
+        return d.replace(year=d.year - 1, day=28)
+
+
+DAILY_METRICS = ("users", "sessions", "conversions", "revenue", "conversion_rate", "aov")
+
+
+def daily_stats(daily: list[DailyPoint]) -> dict[str, MetricStats]:
+    """Mean, sample standard deviation and coefficient of variation of each KPI's
+    daily values. Rates skip days where they are undefined (no sessions, or no
+    orders for AOV) rather than counting them as zero."""
+    out = {}
+    for metric in DAILY_METRICS:
+        if metric == "conversion_rate":
+            values = [p.conversion_rate for p in daily if p.sessions]
+        elif metric == "aov":
+            values = [p.aov for p in daily if p.conversions]
+        else:
+            values = [float(getattr(p, metric)) for p in daily]
+        mean = statistics.fmean(values) if values else 0.0
+        std = statistics.stdev(values) if len(values) >= 2 else 0.0
+        out[metric] = MetricStats(mean=mean, std=std, cv=_ratio(std, mean), days=len(values))
+    return out
+
+
 @app.get("/api/kpis", response_model=KpiResponse)
 def kpis(f: FilterDep) -> KpiResponse:
     cur = db.cursor()
@@ -164,6 +214,27 @@ def kpis(f: FilterDep) -> KpiResponse:
     previous = None
     if prev_start >= START_DATE:
         previous = _kpis(cur, Filters(prev_start, prev_end, f.device, f.country))
+
+    mom = None
+    if windows := month_over_month(f.start, f.end):
+        (m_start, m_end), (p_start, p_end) = windows
+        mom = PeriodComparison(
+            label=f"{m_start:%b %Y} vs {p_start:%b %Y}",
+            current=_kpis(cur, Filters(m_start, m_end, f.device, f.country)),
+            previous=_kpis(cur, Filters(p_start, p_end, f.device, f.country)),
+        )
+
+    yoy, yoy_note = None, None
+    y_start, y_end = year_ago(f.start), year_ago(f.end)
+    if y_start >= START_DATE:
+        yoy = PeriodComparison(
+            label=f"vs {y_start:%b %Y}–{y_end:%b %Y}",
+            current=current,
+            previous=_kpis(cur, Filters(y_start, y_end, f.device, f.country)),
+        )
+    else:
+        months = (END_DATE.year - START_DATE.year) * 12 + END_DATE.month - START_DATE.month + 1
+        yoy_note = f"Year-over-year needs 13+ months of data; this extract covers {months}."
 
     where, params = f.where("s.session_date")
     rows = cur.execute(
@@ -189,7 +260,8 @@ def kpis(f: FilterDep) -> KpiResponse:
     ]
     return KpiResponse(
         current=current, previous=previous, previous_start=prev_start,
-        previous_end=prev_end, daily=daily,
+        previous_end=prev_end, daily=daily, stats=daily_stats(daily),
+        mom=mom, yoy=yoy, yoy_note=yoy_note,
     )
 
 
@@ -223,11 +295,17 @@ def attribution() -> AttributionResponse:
         pivot["conversions"].setdefault(channel, {})[model] = conv
         pivot["revenue"].setdefault(channel, {})[model] = rev
 
+    def row(channel: str, vals: dict[str, float]) -> AttributionRow:
+        credit = [vals.get(m, 0.0) for m in MODELS]
+        spread = statistics.pstdev(credit)
+        return AttributionRow(
+            channel=channel, **dict(zip(MODELS, credit, strict=True)),
+            model_std=spread, model_cv=_ratio(spread, statistics.fmean(credit)),
+        )
+
     def rows_for(metric: str) -> list[AttributionRow]:
-        return [
-            AttributionRow(channel=ch, **{m: vals.get(m, 0.0) for m in MODELS})
-            for ch, vals in sorted(pivot[metric].items(), key=lambda kv: _channel_sort_key(kv[0]))
-        ]
+        ordered = sorted(pivot[metric].items(), key=lambda kv: _channel_sort_key(kv[0]))
+        return [row(ch, vals) for ch, vals in ordered]
 
     return AttributionResponse(conversions=rows_for("conversions"), revenue=rows_for("revenue"))
 

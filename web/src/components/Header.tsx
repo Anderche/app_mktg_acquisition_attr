@@ -1,24 +1,10 @@
-import { useId, useLayoutEffect, useRef, type ReactNode } from "react";
-import { COVERAGE, DATE_PRESETS, presetFor, useFilters } from "../filters";
+import { useLayoutEffect, useRef } from "react";
 import { useMeta } from "../queries";
 import type { Mode } from "../theme";
 import { ActiveFilters } from "./ActiveFilters";
-import { APP_NAME, AuthorCredit } from "./Credit";
+import { APP_NAME, AUTHOR, GitHubIcon, REPO_URL } from "./Credit";
+import { FilterControls, FilterSheet } from "./FilterControls";
 import { SectionNav, useActiveSection } from "./SectionNav";
-
-const controlCls =
-  "h-9 rounded-lg border border-border bg-surface px-2.5 text-sm text-ink hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
-
-function Field({ id, label, children }: { id: string; label: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col">
-      <label htmlFor={id} className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
 
 interface HeaderProps {
   mode: Mode;
@@ -26,31 +12,46 @@ interface HeaderProps {
 }
 
 export function Header({ mode, onModeChange }: HeaderProps) {
-  const { filters, setFilters } = useFilters();
   const meta = useMeta();
-  const ids = { preset: useId(), start: useId(), end: useId(), device: useId(), country: useId() };
-  const preset = presetFor(filters);
   const active = useActiveSection();
   const ref = useHeaderHeightVar();
 
-  const minDate = meta.data?.start_date ?? COVERAGE.start;
-  const maxDate = meta.data?.end_date ?? COVERAGE.end;
-
   return (
-    <header ref={ref} className="header-glass top-0 z-20 border-b border-hairline md:sticky">
-      <div className="mx-auto max-w-[1400px] px-4 pt-3 md:px-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="font-display text-2xl font-semibold leading-tight tracking-tight text-ink">{APP_NAME}</h1>
-            <p className="text-xs text-ink-2">
-              Acquisition &amp; attribution · Google Merchandise Store GA4 sample
-              {meta.data?.source === "synthetic" && (
-                <span className="ml-2 whitespace-nowrap rounded bg-surface-2 px-1.5 py-0.5 font-medium text-ink-2">synthetic data</span>
-              )}
-            </p>
+    <header ref={ref} className="header-glass sticky top-0 z-20 border-b border-hairline">
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6">
+        {/* Row 1: title, section pills (desktop), actions */}
+        <div className="flex h-14 items-center gap-3 md:gap-4">
+          <h1 className="min-w-0 shrink-0 whitespace-nowrap font-display text-xl font-semibold tracking-tight text-ink md:text-2xl">
+            {APP_NAME}{" "}
+            <span className="font-sans text-sm font-normal tracking-normal text-ink-2">
+              by{" "}
+              <a href={AUTHOR.github} target="_blank" rel="noopener noreferrer" className="font-medium text-ink underline-offset-4 hover:underline">
+                {AUTHOR.name}
+              </a>
+            </span>
+          </h1>
+          {meta.data?.source === "synthetic" && (
+            <span className="hidden whitespace-nowrap rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-ink-2 sm:inline">
+              synthetic data
+            </span>
+          )}
+          <div className="hidden min-w-0 flex-1 justify-center md:flex">
+            <SectionNav active={active} />
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <AuthorCredit compact />
+          <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
+            <div className="md:hidden">
+              <FilterSheet />
+            </div>
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Source code on GitHub"
+              title="Source code on GitHub"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-ink-2 hover:bg-surface-2 hover:text-ink"
+            >
+              <GitHubIcon />
+            </a>
             <button
               type="button"
               onClick={() => onModeChange(mode === "dark" ? "light" : "dark")}
@@ -71,77 +72,15 @@ export function Header({ mode, onModeChange }: HeaderProps) {
           </div>
         </div>
 
-        <div role="group" aria-label="Filters" className="mt-3 flex flex-wrap items-end gap-2">
-          <Field id={ids.preset} label="Date range">
-            <select
-              id={ids.preset}
-              className={controlCls}
-              value={preset?.id ?? "custom"}
-              onChange={(e) => {
-                const p = DATE_PRESETS.find((d) => d.id === e.target.value);
-                if (p) setFilters({ start: p.start, end: p.end });
-              }}
-            >
-              {DATE_PRESETS.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label}
-                </option>
-              ))}
-              {!preset && <option value="custom">Custom</option>}
-            </select>
-          </Field>
-          <Field id={ids.start} label="From">
-            <input
-              id={ids.start}
-              type="date"
-              className={`${controlCls} tabular`}
-              min={minDate}
-              max={filters.end}
-              value={filters.start}
-              onChange={(e) => e.target.value && setFilters({ start: e.target.value })}
-            />
-          </Field>
-          <Field id={ids.end} label="To">
-            <input
-              id={ids.end}
-              type="date"
-              className={`${controlCls} tabular`}
-              min={filters.start}
-              max={maxDate}
-              value={filters.end}
-              onChange={(e) => e.target.value && setFilters({ end: e.target.value })}
-            />
-          </Field>
-          <Field id={ids.device} label="Device">
-            <select id={ids.device} className={controlCls} value={filters.device} onChange={(e) => setFilters({ device: e.target.value })}>
-              <option value="all">All devices</option>
-              {meta.data?.devices.map((d) => (
-                <option key={d} value={d}>
-                  {d.charAt(0).toUpperCase() + d.slice(1)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id={ids.country} label="Country">
-            <select
-              id={ids.country}
-              className={`${controlCls} max-w-[12rem]`}
-              value={filters.country}
-              onChange={(e) => setFilters({ country: e.target.value })}
-            >
-              <option value="all">All countries</option>
-              {meta.data?.countries.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-
-        <div className="mt-3 flex flex-col gap-2 border-t border-hairline py-2.5 lg:flex-row lg:items-center lg:justify-between">
-          <SectionNav active={active} />
-          <ActiveFilters />
+        {/* Row 2: filters + active-filter chips (desktop); section pills (phones) */}
+        <div className="flex min-h-[3rem] items-center gap-3 border-t border-hairline py-1.5">
+          <div className="hidden flex-1 items-center justify-between gap-3 md:flex">
+            <FilterControls layout="inline" />
+            <ActiveFilters />
+          </div>
+          <div className="min-w-0 flex-1 md:hidden">
+            <SectionNav active={active} />
+          </div>
         </div>
       </div>
     </header>
@@ -149,8 +88,8 @@ export function Header({ mode, onModeChange }: HeaderProps) {
 }
 
 /**
- * Publishes the header's height as --header-h while it is sticky, so in-page
- * anchors scroll to just below it (0 when it scrolls away on small screens).
+ * Publishes the header's height as --header-h, so in-page anchors scroll to
+ * just below it.
  */
 function useHeaderHeightVar() {
   const ref = useRef<HTMLElement>(null);

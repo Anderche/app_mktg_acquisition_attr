@@ -5,8 +5,7 @@ import { useSankey } from "../queries";
 import { channelColor, useChartTheme } from "../theme";
 import { Card, ErrorNote, Section, Skeleton, TableToggle } from "./Card";
 import { Chart } from "./Chart";
-
-const HEIGHT = 420;
+import { useChartHeight } from "../useMediaQuery";
 
 export function Paths() {
   const [top, setTop] = useState(20);
@@ -15,6 +14,7 @@ export function Paths() {
   const { data, error, isPending, isPlaceholderData } = useSankey(committedTop);
   const t = useChartTheme();
   const sliderId = useId();
+  const height = useChartHeight(320, 420);
 
   const option = useMemo(() => (data && data.links.length ? sankeyOption(data, t) : null), [data, t]);
   const maxStep = data ? sankeyMaxStep(data) : 0;
@@ -58,12 +58,12 @@ export function Paths() {
         {error ? (
           <ErrorNote error={error} />
         ) : isPending || !data ? (
-          <Skeleton height={HEIGHT} />
+          <Skeleton height={height} />
         ) : !option ? (
           <p className="py-16 text-center text-sm text-ink-2">No conversions match these filters.</p>
         ) : showTable ? (
-          <div className="overflow-x-auto">
-            <table className="tabular w-full min-w-[560px] text-sm">
+          <div className="@container overflow-x-auto">
+            <table className="stack-table tabular w-full min-w-[560px] text-sm">
               <caption className="sr-only">Top converting paths</caption>
               <thead>
                 <tr className="border-b border-hairline text-left text-xs text-muted">
@@ -77,8 +77,8 @@ export function Paths() {
               <tbody>
                 {data.paths.map((p, i) => (
                   <tr key={p.path} className="border-b border-hairline last:border-0">
-                    <td className="py-2 pr-2 text-muted">{i + 1}</td>
-                    <td className="py-2 text-ink">
+                    <td data-label="#" className="py-2 pr-2 text-muted">{i + 1}</td>
+                    <td data-label="Path" className="py-2 text-ink">
                       {p.path.split(" > ").map((ch, j) => (
                         <span key={j} className="whitespace-nowrap">
                           {j > 0 && <span className="mx-1 text-muted">→</span>}
@@ -91,9 +91,9 @@ export function Paths() {
                         </span>
                       ))}
                     </td>
-                    <td className="py-2 pl-3 text-right text-ink-2">{fmtInt(p.conversions)}</td>
-                    <td className="py-2 pl-3 text-right text-ink-2">{fmtPct(p.share)}</td>
-                    <td className="py-2 pl-3 text-right text-ink-2">{fmtUsd(p.revenue)}</td>
+                    <td data-label="Conversions" className="py-2 pl-3 text-right text-ink-2">{fmtInt(p.conversions)}</td>
+                    <td data-label="Share" className="py-2 pl-3 text-right text-ink-2">{fmtPct(p.share)}</td>
+                    <td data-label="Revenue" className="py-2 pl-3 text-right text-ink-2">{fmtUsd(p.revenue)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -115,7 +115,7 @@ export function Paths() {
                 </span>
               ))}
             </div>
-            <Chart option={option} height={HEIGHT} label="Sankey diagram of the top converting customer journeys" />
+            <Chart option={option} height={height} label="Sankey diagram of the top converting customer journeys" />
           </>
         )}
         {data && data.total_conversions > 0 && (

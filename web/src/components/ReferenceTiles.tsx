@@ -2,22 +2,27 @@ import { useState } from "react";
 import { REFERENCE_TILES, type ReferenceTile } from "../content/reference";
 import { fmtCompact } from "../format";
 import { useMeta } from "../queries";
-import { sectionHref } from "../sections";
+import { hueFor, hueStyle, sectionHref } from "../sections";
+import { HueDot } from "./Chip";
 
-export const HIDE_KEY = "touchline-reference-hidden";
+// Which tile is open ("" = all collapsed, the default for new visitors).
+export const OPEN_KEY = "touchline-reference-open";
 
-function readHidden(): boolean {
+type TileId = ReferenceTile["id"];
+
+function readOpen(): TileId | null {
   try {
-    return localStorage.getItem(HIDE_KEY) === "1";
+    const v = localStorage.getItem(OPEN_KEY);
+    return REFERENCE_TILES.some((t) => t.id === v) ? (v as TileId) : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-function writeHidden(hidden: boolean) {
+function writeOpen(id: TileId | null) {
   try {
-    if (hidden) localStorage.setItem(HIDE_KEY, "1");
-    else localStorage.removeItem(HIDE_KEY);
+    if (id) localStorage.setItem(OPEN_KEY, id);
+    else localStorage.removeItem(OPEN_KEY);
   } catch {
     // storage unavailable: the choice applies for this visit only
   }
@@ -50,64 +55,88 @@ function SourceStats() {
 }
 
 function Tile({ tile }: { tile: ReferenceTile }) {
+  const hue = hueFor(tile.link.section);
   return (
-    <article aria-labelledby={`tile-${tile.id}`} className="flex min-w-0 flex-col rounded-card border border-border bg-surface p-5 shadow-card">
-      <p className="text-caption font-medium uppercase tracking-[0.08em] text-muted" aria-hidden>
-        {tile.numeral}
-      </p>
-      <h3 id={`tile-${tile.id}`} className="mt-0.5 font-display text-lg font-semibold text-ink">
+    <article
+      id={`tile-panel-${tile.id}`}
+      aria-labelledby={`tile-${tile.id}`}
+      className="min-w-0 rounded-card border border-t-4 bg-surface p-5 shadow-card"
+      style={{ borderColor: "var(--border)", borderTopColor: `var(--hue-${hue}-edge)` }}
+    >
+      <h3 id={`tile-${tile.id}`} className="font-display text-lg font-semibold text-ink">
+        <span className="mr-2 text-caption font-medium uppercase tracking-[0.08em] text-muted">{tile.numeral}</span>
         {tile.title}
       </h3>
-      <p className="mt-1.5 text-sm text-ink-2">{tile.lede}</p>
-      {tile.id === "source" && (
-        <div className="mt-3">
-          <SourceStats />
+      <div className="mt-2 grid gap-x-8 gap-y-3 md:grid-cols-2">
+        <div>
+          <p className="text-sm text-ink-2">{tile.lede}</p>
+          {tile.id === "source" && (
+            <div className="mt-3">
+              <SourceStats />
+            </div>
+          )}
         </div>
-      )}
-      <ul className="mt-3 space-y-1.5 text-sm text-ink-2">
-        {tile.points.map((p) => (
-          <li key={p.term}>
-            <b className="font-semibold text-ink">{p.term}:</b> {p.text}
-          </li>
-        ))}
-      </ul>
-      <a href={sectionHref(tile.link.section)} className="mt-auto pt-4 text-sm font-medium text-accent hover:underline">
+        <ul className="space-y-1.5 text-sm text-ink-2">
+          {tile.points.map((p) => (
+            <li key={p.term}>
+              <b className="font-semibold text-ink">{p.term}:</b> {p.text}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <a href={sectionHref(tile.link.section)} className="mt-4 inline-block text-sm font-medium text-accent hover:underline">
         {tile.link.label} <span aria-hidden>→</span>
       </a>
     </article>
   );
 }
 
+function chipLabel(tile: ReferenceTile, sessions: number | undefined): string {
+  if (tile.id === "source" && sessions) return `${tile.title} · ${fmtCompact(sessions)} sessions`;
+  return tile.title;
+}
+
+/** Collapsed by default: a strip of three chips, each opening its tile in place. */
 export function ReferenceTiles() {
-  const [hidden, setHidden] = useState(readHidden);
-  const toggle = () => {
-    setHidden((h) => {
-      writeHidden(!h);
-      return !h;
-    });
+  const meta = useMeta();
+  const [open, setOpen] = useState<TileId | null>(readOpen);
+  const toggle = (id: TileId) => {
+    const next = open === id ? null : id;
+    setOpen(next);
+    writeOpen(next);
   };
+  const openTile = REFERENCE_TILES.find((t) => t.id === open);
 
   return (
-    <section aria-labelledby="reference-title" className="col-span-12 min-w-0">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 id="reference-title" className="text-caption font-medium uppercase tracking-[0.08em] text-muted">
-          About this analysis
-        </h2>
-        <button
-          type="button"
-          onClick={toggle}
-          aria-expanded={!hidden}
-          aria-controls="reference-tiles"
-          className="rounded-full px-2.5 py-1 text-xs font-medium text-ink-2 hover:bg-surface-2 hover:text-ink"
-        >
-          {hidden ? "Show" : "Hide"}
-        </button>
+    <section aria-label="About this analysis" className="col-span-12 min-w-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-caption font-medium uppercase tracking-[0.08em] text-muted">About this analysis</span>
+        {REFERENCE_TILES.map((tile) => {
+          const hue = hueFor(tile.link.section);
+          const isOpen = open === tile.id;
+          return (
+            <button
+              key={tile.id}
+              type="button"
+              onClick={() => toggle(tile.id)}
+              aria-expanded={isOpen}
+              aria-controls={isOpen ? `tile-panel-${tile.id}` : undefined}
+              className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-sm font-medium text-ink transition-colors hover:brightness-[0.97]"
+              style={isOpen ? hueStyle(hue) : { borderColor: "var(--border)", background: "var(--surface-1)" }}
+            >
+              <HueDot hue={hue} />
+              <span className="text-muted">{tile.numeral} ·</span>
+              {chipLabel(tile, meta.data?.stats.sessions)}
+              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden className={`text-muted transition-transform ${isOpen ? "rotate-180" : ""}`}>
+                <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+              </svg>
+            </button>
+          );
+        })}
       </div>
-      {!hidden && (
-        <div id="reference-tiles" className="grid gap-3 md:grid-cols-3">
-          {REFERENCE_TILES.map((tile) => (
-            <Tile key={tile.id} tile={tile} />
-          ))}
+      {openTile && (
+        <div className="mt-3">
+          <Tile tile={openTile} />
         </div>
       )}
     </section>

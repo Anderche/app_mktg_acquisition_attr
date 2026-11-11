@@ -11,7 +11,7 @@ export function GitHubIcon({ size = 16 }: { size?: number }) {
 }
 
 /** "Built by Anders Kiss" with a GitHub mark linking to the author's profile. */
-export function AuthorCredit({ compact = false }: { compact?: boolean }) {
+export function AuthorCredit() {
   return (
     <a
       href={AUTHOR.github}
@@ -21,7 +21,7 @@ export function AuthorCredit({ compact = false }: { compact?: boolean }) {
       className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-2"
     >
       <GitHubIcon />
-      <span className={compact ? "hidden sm:inline" : ""}>{AUTHOR.name}</span>
+      <span>{AUTHOR.name}</span>
     </a>
   );
 }

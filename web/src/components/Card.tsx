@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { eyebrowFor } from "../sections";
+import { eyebrowFor, hueFor, hueStyle, type SectionId } from "../sections";
 
 interface SectionProps {
-  id: string;
+  id: SectionId;
   title: string;
   subtitle?: ReactNode;
   actions?: ReactNode;
@@ -10,17 +10,25 @@ interface SectionProps {
   className?: string;
 }
 
+/** "02 · Channels" on the section's pastel, matching its nav pill. */
+export function Eyebrow({ id }: { id: SectionId }) {
+  return (
+    <p
+      aria-hidden
+      className="mb-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-caption font-semibold uppercase tracking-[0.08em] text-ink-2"
+      style={hueStyle(hueFor(id))}
+    >
+      {eyebrowFor(id)}
+    </p>
+  );
+}
+
 export function Section({ id, title, subtitle, actions, children, className = "" }: SectionProps) {
-  const eyebrow = eyebrowFor(id);
   return (
     <section id={id} aria-labelledby={`${id}-title`} className={`col-span-12 min-w-0 ${className}`}>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="max-w-3xl">
-          {eyebrow && (
-            <p className="mb-1 text-caption font-medium uppercase tracking-[0.08em] text-muted" aria-hidden>
-              {eyebrow}
-            </p>
-          )}
+          <Eyebrow id={id} />
           <h2 id={`${id}-title`} className="font-display text-title font-semibold text-ink">
             {title}
           </h2>

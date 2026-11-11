@@ -126,8 +126,8 @@ export function CampaignTable({ rows }: { rows: CampaignRow[] }) {
           </button>
         </div>
       </div>
-      <div className="max-h-[520px] overflow-auto">
-        <table className="tabular w-full min-w-[760px] text-sm">
+      <div className="@container max-h-[520px] overflow-auto">
+        <table className="stack-table tabular w-full min-w-[760px] text-sm">
           <caption className="sr-only">Campaign leaderboard</caption>
           <thead className="sticky top-0 bg-surface">
             <tr className="border-b border-hairline text-left text-xs text-muted">
@@ -144,6 +144,7 @@ export function CampaignTable({ rows }: { rows: CampaignRow[] }) {
                   return (
                     <td
                       key={c.key}
+                      data-label={c.label}
                       className={`py-2 ${c.numeric ? "pl-3 text-right" : "pr-3"} ${
                         tone === "good" ? "font-medium text-good" : tone === "bad" ? "font-medium text-bad" : c.numeric ? "text-ink-2" : "text-ink"
                       }`}

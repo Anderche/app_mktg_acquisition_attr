@@ -1,12 +1,21 @@
-import type { AttributionRow, ChannelRow, SankeyResponse } from "../api";
+import type { AttributionRow, ChannelRow, DailyPoint, SankeyResponse } from "../api";
 import { channelColor, chartTheme } from "../theme";
-import { attributionOption, channelRevenueOption, sankeyMaxStep, sankeyOption } from "./options";
+import {
+  attributionOption,
+  channelRevenueOption,
+  mostDisputed,
+  sankeyMaxStep,
+  sankeyOption,
+  sparklineOption,
+  topPathsSankey,
+  vsLastClick,
+} from "./options";
 
 const light = chartTheme("light");
 
 const attribution: AttributionRow[] = [
-  { channel: "Organic Search", last_click: 324, first_click: 800, linear: 567.5, markov: 492.1 },
-  { channel: "Direct", last_click: 972, first_click: 543, linear: 761.2, markov: 766.2 },
+  { channel: "Organic Search", last_click: 324, first_click: 800, linear: 567.5, markov: 492.1, model_std: 170, model_cv: 0.31 },
+  { channel: "Direct", last_click: 972, first_click: 543, linear: 761.2, markov: 766.2, model_std: 152, model_cv: 0.2 },
 ];
 
 describe("attributionOption", () => {
@@ -58,5 +67,80 @@ describe("sankeyOption", () => {
 
   it("reports the deepest step", () => {
     expect(sankeyMaxStep(sankey)).toBe(2);
+  });
+});
+
+describe("topPathsSankey", () => {
+  const full: SankeyResponse = {
+    nodes: [],
+    links: [],
+    paths: [
+      { path: "Organic Search > Direct", conversions: 6, share: 0.3, revenue: 300 },
+      { path: "Direct", conversions: 4, share: 0.2, revenue: 200 },
+      { path: "Email > Direct", conversions: 2, share: 0.1, revenue: 100 },
+    ],
+    total_conversions: 20,
+  };
+
+  it("rebuilds nodes and links from only the top n paths", () => {
+    const s = topPathsSankey(full, 2);
+    expect(s.paths).toHaveLength(2);
+    expect(s.nodes.map((n) => n.name).sort()).toEqual(["Direct · 1", "Direct · 2", "Organic Search · 1", "Purchase"]);
+    const into = s.links.filter((l) => l.target === "Purchase").reduce((a, l) => a + l.value, 0);
+    expect(into).toBe(10);
+    expect(s.links.find((l) => l.source === "Organic Search · 1")).toMatchObject({ target: "Direct · 2", value: 6, share: 0.3 });
+    expect(s.total_conversions).toBe(20);
+  });
+
+  it("is empty when there are no paths", () => {
+    expect(topPathsSankey({ ...full, paths: [] }, 8)).toMatchObject({ nodes: [], links: [] });
+  });
+
+  it("compact mode hides labels on small middle nodes", () => {
+    const s = topPathsSankey(
+      { ...full, paths: [...full.paths, { path: "Referral > Paid Search", conversions: 1, share: 0.05, revenue: 10 }] },
+      4,
+    );
+    const nodes = (sankeyOption(s, light, { compact: true }).series as { data: { name: string; label: { show: boolean } }[] }[])[0].data;
+    expect(nodes.find((n) => n.name === "Paid Search · 2")!.label.show).toBe(false);
+    expect(nodes.find((n) => n.name === "Referral · 1")!.label.show).toBe(true);
+    expect(nodes.find((n) => n.name === "Purchase")!.label.show).toBe(true);
+  });
+});
+
+describe("sparklineOption", () => {
+  const daily = [10, 20, 30].map(
+    (v, i): DailyPoint => ({ date: `2020-11-0${i + 1}`, users: v, sessions: v, conversions: 1, revenue: v, conversion_rate: 0.1, aov: v }),
+  );
+
+  it("draws a mean ± σ band when stats are given", () => {
+    const series = (sparklineOption(daily, "users", light, String, { mean: 20, std: 10 }).series as Record<string, unknown>[])[0];
+    expect(series.markArea).toMatchObject({ data: [[{ yAxis: 10 }, { yAxis: 30 }]] });
+    expect(series.areaStyle).toBeUndefined();
+  });
+
+  it("clips the band at zero and falls back to an area fill without stats", () => {
+    const banded = (sparklineOption(daily, "users", light, String, { mean: 5, std: 10 }).series as Record<string, unknown>[])[0];
+    expect(banded.markArea).toMatchObject({ data: [[{ yAxis: 0 }, { yAxis: 15 }]] });
+    const plain = (sparklineOption(daily, "users", light, String).series as Record<string, unknown>[])[0];
+    expect(plain.markArea).toBeUndefined();
+    expect(plain.areaStyle).toBeDefined();
+  });
+});
+
+describe("attribution stats helpers", () => {
+  it("computes each model's change against last click", () => {
+    expect(vsLastClick(attribution[0], "markov")).toBeCloseTo((492.1 - 324) / 324);
+    expect(vsLastClick({ ...attribution[0], last_click: 0 }, "markov")).toBeNull();
+  });
+
+  it("finds the channel the models disagree on most, relative to size", () => {
+    expect(mostDisputed(attribution)?.channel).toBe("Organic Search");
+    expect(mostDisputed([])).toBeNull();
+  });
+
+  it("ignores channels too small for their CV to mean anything", () => {
+    const tiny: AttributionRow = { channel: "Email", last_click: 5, first_click: 2, linear: 4, markov: 3, model_std: 1.1, model_cv: 0.32 };
+    expect(mostDisputed([...attribution, tiny])?.channel).toBe("Organic Search");
   });
 });

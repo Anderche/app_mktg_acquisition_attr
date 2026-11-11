@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { SECTIONS, sectionHref, type SectionId } from "../sections";
-import { ChipLink } from "./Chip";
+import { ChipLink, HueDot } from "./Chip";
 
 /** The section currently in the reading band (just below the sticky header). */
 export function useActiveSection(): SectionId | null {
@@ -34,7 +34,13 @@ export function SectionNav({ active }: { active: SectionId | null }) {
       <ul className="scrollbar-none -mx-1 flex snap-x gap-1.5 overflow-x-auto px-1 py-0.5">
         {SECTIONS.map((s) => (
           <li key={s.id}>
-            <ChipLink href={sectionHref(s.id)} active={active === s.id} aria-current={active === s.id ? "location" : undefined}>
+            <ChipLink
+              href={sectionHref(s.id)}
+              hue={s.hue}
+              active={active === s.id}
+              icon={<HueDot hue={s.hue} />}
+              aria-current={active === s.id ? "location" : undefined}
+            >
               {s.label}
             </ChipLink>
           </li>

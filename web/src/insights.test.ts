@@ -7,6 +7,8 @@ const attr = (channel: string, last_click: number, markov: number): AttributionR
   first_click: 0,
   linear: 0,
   markov,
+  model_std: 0,
+  model_cv: 0,
 });
 
 const campaign = (name: string, sessions: number, conversions: number): CampaignRow => ({
