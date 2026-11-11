@@ -17,7 +17,21 @@ export default {
         accent: "var(--accent)",
       },
       fontFamily: {
-        sans: ["system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
+        // Serif is for headings only; numbers, tables and charts stay sans.
+        display: ['"Source Serif 4 Variable"', "Georgia", '"Times New Roman"', "serif"],
+        sans: ['"Inter Variable"', "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
+      },
+      fontSize: {
+        display: ["2rem", { lineHeight: "1.15", letterSpacing: "-0.015em" }],
+        title: ["1.375rem", { lineHeight: "1.25", letterSpacing: "-0.01em" }],
+        body: ["0.9375rem", { lineHeight: "1.55" }],
+        caption: ["0.75rem", { lineHeight: "1.4" }],
+      },
+      boxShadow: {
+        card: "var(--shadow-card)",
+      },
+      borderRadius: {
+        card: "16px",
       },
     },
   },

@@ -1,8 +1,10 @@
-import { useId, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, type ReactNode } from "react";
 import { COVERAGE, DATE_PRESETS, presetFor, useFilters } from "../filters";
 import { useMeta } from "../queries";
 import type { Mode } from "../theme";
+import { ActiveFilters } from "./ActiveFilters";
 import { APP_NAME, AuthorCredit } from "./Credit";
+import { SectionNav, useActiveSection } from "./SectionNav";
 
 const controlCls =
   "h-9 rounded-lg border border-border bg-surface px-2.5 text-sm text-ink hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
@@ -24,21 +26,22 @@ interface HeaderProps {
 }
 
 export function Header({ mode, onModeChange }: HeaderProps) {
-  const { filters, setFilters, reset } = useFilters();
+  const { filters, setFilters } = useFilters();
   const meta = useMeta();
   const ids = { preset: useId(), start: useId(), end: useId(), device: useId(), country: useId() };
   const preset = presetFor(filters);
-  const isDefault = filters.device === "all" && filters.country === "all" && preset?.id === "all";
+  const active = useActiveSection();
+  const ref = useHeaderHeightVar();
 
   const minDate = meta.data?.start_date ?? COVERAGE.start;
   const maxDate = meta.data?.end_date ?? COVERAGE.end;
 
   return (
-    <header className="top-0 z-20 border-b border-hairline bg-page md:sticky">
-      <div className="mx-auto max-w-[1400px] px-4 py-3 md:px-6">
+    <header ref={ref} className="header-glass top-0 z-20 border-b border-hairline md:sticky">
+      <div className="mx-auto max-w-[1400px] px-4 pt-3 md:px-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-lg font-semibold leading-tight text-ink">{APP_NAME}</h1>
+            <h1 className="font-display text-2xl font-semibold leading-tight tracking-tight text-ink">{APP_NAME}</h1>
             <p className="text-xs text-ink-2">
               Acquisition &amp; attribution · Google Merchandise Store GA4 sample
               {meta.data?.source === "synthetic" && (
@@ -48,12 +51,6 @@ export function Header({ mode, onModeChange }: HeaderProps) {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <AuthorCredit compact />
-            <a
-              href="#data-notes"
-              className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-2"
-            >
-              Data notes
-            </a>
             <button
               type="button"
               onClick={() => onModeChange(mode === "dark" ? "light" : "dark")}
@@ -140,13 +137,39 @@ export function Header({ mode, onModeChange }: HeaderProps) {
               ))}
             </select>
           </Field>
-          {!isDefault && (
-            <button type="button" onClick={reset} className="h-9 rounded-lg px-2.5 text-sm text-ink-2 hover:bg-surface-2 hover:text-ink">
-              Reset filters
-            </button>
-          )}
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2 border-t border-hairline py-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <SectionNav active={active} />
+          <ActiveFilters />
         </div>
       </div>
     </header>
   );
+}
+
+/**
+ * Publishes the header's height as --header-h while it is sticky, so in-page
+ * anchors scroll to just below it (0 when it scrolls away on small screens).
+ */
+function useHeaderHeightVar() {
+  const ref = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const update = () => {
+      const sticky = getComputedStyle(el).position === "sticky";
+      root.style.setProperty("--header-h", sticky ? `${el.offsetHeight}px` : "0px");
+    };
+    update();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    ro?.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+  return ref;
 }

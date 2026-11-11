@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { eyebrowFor } from "../sections";
 
 interface SectionProps {
   id: string;
@@ -10,14 +11,20 @@ interface SectionProps {
 }
 
 export function Section({ id, title, subtitle, actions, children, className = "" }: SectionProps) {
+  const eyebrow = eyebrowFor(id);
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className={`col-span-12 min-w-0 scroll-mt-40 ${className}`}>
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 id={`${id}-title`} className="text-base font-semibold text-ink">
+    <section id={id} aria-labelledby={`${id}-title`} className={`col-span-12 min-w-0 ${className}`}>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div className="max-w-3xl">
+          {eyebrow && (
+            <p className="mb-1 text-caption font-medium uppercase tracking-[0.08em] text-muted" aria-hidden>
+              {eyebrow}
+            </p>
+          )}
+          <h2 id={`${id}-title`} className="font-display text-title font-semibold text-ink">
             {title}
           </h2>
-          {subtitle && <p className="mt-0.5 text-sm text-ink-2">{subtitle}</p>}
+          {subtitle && <p className="mt-1 text-sm text-ink-2">{subtitle}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
@@ -30,7 +37,7 @@ export function Card({ children, className = "", busy = false }: { children: Rea
   return (
     <div
       aria-busy={busy}
-      className={`min-w-0 rounded-xl border border-border bg-surface p-4 transition-opacity duration-200 ${busy ? "opacity-60" : ""} ${className}`}
+      className={`min-w-0 rounded-card border border-border bg-surface p-4 shadow-card transition-opacity md:p-5 duration-200 ${busy ? "opacity-60" : ""} ${className}`}
     >
       {children}
     </div>
