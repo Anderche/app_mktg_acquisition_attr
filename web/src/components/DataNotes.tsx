@@ -1,5 +1,6 @@
 import { fmtInt } from "../format";
 import { useMeta } from "../queries";
+import { APP_NAME, AUTHOR, AuthorCredit } from "./Credit";
 
 export function DataNotes() {
   const { data } = useMeta();
@@ -55,6 +56,14 @@ export function DataNotes() {
               <li key={l}>{l}</li>
             ))}
           </ul>
+        </div>
+      </div>
+      <div className="border-t border-hairline">
+        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-4 text-sm text-ink-2 md:px-6">
+          <span>
+            <b className="font-semibold text-ink">{APP_NAME}</b> · built by {AUTHOR.name}
+          </span>
+          <AuthorCredit />
         </div>
       </div>
     </footer>

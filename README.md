@@ -1,4 +1,4 @@
-# Acquisition & Attribution Dashboard
+# Touchline — Acquisition & Attribution Dashboard
 
 A single-page analytics app that shows how each acquisition channel drives users, conversions and revenue for an online retailer, and how credit for those conversions shifts between last-click, first-click, linear and Markov-chain attribution.
 
@@ -10,6 +10,10 @@ Built on the public **GA4 obfuscated ecommerce sample** (Google Merchandise Stor
 2. How does channel credit change between last-click, first-click and Markov attribution?
 3. Which customer journeys most often end in a purchase?
 4. Which campaigns perform best and worst on revenue and conversion rate?
+
+## Why Touchline
+
+Most marketing reports hand all the credit for a sale to the last click, which flatters channels that close and hides the ones that start journeys. Touchline puts four attribution models side by side on the same conversions, so the gap is visible at a glance. It is a portfolio project by [Anders Kiss](https://github.com/Anderche); issues and pull requests are welcome. Start with Quick start below.
 
 ## Reference
 Google_cloud_project_id: ```railway-app-mktg-acquisition```
