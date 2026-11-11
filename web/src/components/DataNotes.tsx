@@ -1,14 +1,23 @@
 import { fmtInt } from "../format";
 import { useMeta } from "../queries";
+import { eyebrowFor } from "../sections";
 import { APP_NAME, AUTHOR, AuthorCredit } from "./Credit";
 
 export function DataNotes() {
   const { data } = useMeta();
   return (
-    <footer id="data-notes" className="scroll-mt-24 border-t border-hairline bg-surface">
+    <footer id="data-notes" aria-labelledby="data-notes-title" className="border-t border-hairline bg-surface">
+      <div className="mx-auto max-w-[1400px] px-4 pt-10 md:px-6">
+        <p className="mb-1 text-caption font-medium uppercase tracking-[0.08em] text-muted" aria-hidden>
+          {eyebrowFor("data-notes")}
+        </p>
+        <h2 id="data-notes-title" className="font-display text-title font-semibold text-ink">
+          Sources, method and limits
+        </h2>
+      </div>
       <div className="mx-auto grid max-w-[1400px] gap-8 px-4 py-8 text-sm text-ink-2 md:grid-cols-3 md:px-6">
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-ink">Data sources</h2>
+          <h3 className="mb-2 font-display text-base font-semibold text-ink">Data sources</h3>
           <p>
             <code className="break-all rounded bg-surface-2 px-1 text-xs">
               {data?.dataset ?? "bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*"}
@@ -32,7 +41,7 @@ export function DataNotes() {
           )}
         </div>
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-ink">Methodology</h2>
+          <h3 className="mb-2 font-display text-base font-semibold text-ink">Methodology</h3>
           <ul className="list-disc space-y-1.5 pl-4">
             <li>
               One row per GA4 session, labelled with its landing source/medium, which maps to a default channel group. Referrals
@@ -50,7 +59,7 @@ export function DataNotes() {
           </ul>
         </div>
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-ink">Limitations</h2>
+          <h3 className="mb-2 font-display text-base font-semibold text-ink">Limitations</h3>
           <ul className="list-disc space-y-1.5 pl-4">
             {(data?.limitations ?? []).map((l) => (
               <li key={l}>{l}</li>

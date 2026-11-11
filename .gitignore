@@ -15,6 +15,7 @@ data/*.tmp
 web/node_modules/
 web/dist/
 web/coverage/
+web/.vite/
 *.tsbuildinfo
 
 # Env / secrets

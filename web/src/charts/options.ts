@@ -6,7 +6,7 @@ import { MODELS } from "../api";
 import { fmtInt, fmtPct, fmtUsd, fmtUsdCompact } from "../format";
 import { channelColor, MODEL_LABELS, type ChartTheme } from "../theme";
 
-const FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+const FONT = '"Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif';
 
 function tooltipBase(t: ChartTheme) {
   return {

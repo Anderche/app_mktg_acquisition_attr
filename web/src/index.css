@@ -1,3 +1,5 @@
+@import "./fonts.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,7 +13,7 @@
   --text-secondary: #52514e;
   --text-muted: #6f6d68;
   --hairline: #e1e0d9;
-  --border: rgba(11, 11, 11, 0.1);
+  --border: rgba(11, 11, 11, 0.08);
   --delta-good: #006300;
   --delta-bad: #b42f2f;
   --good-wash: rgba(12, 163, 12, 0.1);
@@ -19,6 +21,11 @@
   --accent: #2a78d6;
   --cta-bg: #1c5cab;
   --cta-text: #ffffff;
+  --chip-active-bg: #0b0b0b;
+  --chip-active-text: #fcfcfb;
+  --shadow-card: 0 1px 2px rgba(11, 11, 11, 0.04), 0 6px 16px -6px rgba(11, 11, 11, 0.08);
+  /* Height of the sticky header; set from JS so in-page anchors land below it. */
+  --header-h: 0px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,7 +38,7 @@
     --text-secondary: #c3c2b7;
     --text-muted: #a3a29b;
     --hairline: #2c2c2a;
-    --border: rgba(255, 255, 255, 0.1);
+    --border: rgba(255, 255, 255, 0.09);
     --delta-good: #0ca30c;
     --delta-bad: #e66767;
     --good-wash: rgba(12, 163, 12, 0.16);
@@ -39,6 +46,9 @@
     --accent: #3987e5;
     --cta-bg: #86b6ef;
     --cta-text: #0b0b0b;
+    --chip-active-bg: #f0efec;
+    --chip-active-text: #1a1a19;
+    --shadow-card: none;
   }
 }
 
@@ -51,7 +61,7 @@
   --text-secondary: #c3c2b7;
   --text-muted: #a3a29b;
   --hairline: #2c2c2a;
-  --border: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.09);
   --delta-good: #0ca30c;
   --delta-bad: #e66767;
   --good-wash: rgba(12, 163, 12, 0.16);
@@ -59,12 +69,47 @@
   --accent: #3987e5;
   --cta-bg: #86b6ef;
   --cta-text: #0b0b0b;
+  --chip-active-bg: #f0efec;
+  --chip-active-text: #1a1a19;
+  --shadow-card: none;
 }
 
 html,
 body {
   background: var(--page);
   color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Anchored sections and the footer clear the sticky header. */
+section[id],
+footer[id] {
+  scroll-margin-top: calc(var(--header-h) + 16px);
+}
+
+.header-glass {
+  background: color-mix(in srgb, var(--page) 82%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .header-glass {
+    background: var(--page);
+  }
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
 .tabular {
