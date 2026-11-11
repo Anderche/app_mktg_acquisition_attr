@@ -46,7 +46,7 @@ make etl SOURCE=bigquery
 
 The query scans about 3 months of the sample, which fits comfortably in the BigQuery sandbox's free tier.
 
-With Docker: `docker compose up --build`, then open http://localhost:8080. The API container builds the database on first start and keeps it in a volume.
+With Docker: `docker compose up --build`, then open http://localhost:8080. A single container serves the dashboard and the API, builds the database on first start and keeps it in a volume.
 
 ### Synthetic vs. real data
 
@@ -150,8 +150,25 @@ CI (`.github/workflows/ci.yml`) runs lint and tests for both halves, then builds
 
 ## Deploy
 
-- **API:** the root `Dockerfile` runs anywhere that runs containers (Railway, Render, Fly). Set `ETL_SOURCE=bigquery` and provide credentials to build from the real dataset on first boot, or mount a prebuilt `analytics.duckdb` at `/app/data`. Set `CORS_ORIGINS` to the frontend's origin.
-- **Frontend:** `pnpm build` in `web/` produces a static `dist/` for Vercel or any static host. Set `VITE_API_URL` to the API's public URL at build time.
+The root `Dockerfile` builds one image: Node builds the React app, and FastAPI serves it at `/` next to the API at `/api/*`. One service, one origin, no CORS setup.
+
+**Railway** (`railway.json` sets the Dockerfile build and a `/api/health` health check):
+
+1. New Project → Deploy from GitHub repo → this repository.
+2. Add a volume mounted at `/app/data` so the database survives redeploys.
+3. Variables on the service:
+
+| Variable | Value |
+|---|---|
+| `RAILWAY_RUN_UID` | `0` (the image runs as a non-root user; Railway volumes are root-owned) |
+| `ETL_SOURCE` | `synthetic`, or `bigquery` for the real dataset |
+| `GCP_PROJECT` | your Google Cloud project ID (BigQuery only) |
+| `GOOGLE_CREDENTIALS_JSON` | the full service-account key JSON, pasted as text (BigQuery only) |
+| `ETL_REFRESH_ON_START` | optional: `1` rebuilds the database on every deploy |
+
+4. Settings → Networking → Generate Domain, e.g. `https://<name>.up.railway.app`.
+
+The database is built on first boot (seconds for synthetic data, about a minute from BigQuery). `PORT` is set by Railway. For a frontend hosted elsewhere, build `web/` with `VITE_API_URL` and set `CORS_ORIGINS` on the API.
 
 ## Known limitations
 

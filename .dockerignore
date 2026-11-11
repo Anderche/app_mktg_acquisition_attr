@@ -1,10 +1,16 @@
 .git
+.github
 .venv
 .claude
 .pytest_cache
 .ruff_cache
 **/__pycache__
 data
-web
 tests
+docs
 *.md
+web/node_modules
+web/dist
+web/.vite
+web/coverage
+**/*.tsbuildinfo

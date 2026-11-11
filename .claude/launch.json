@@ -14,6 +14,14 @@
       "runtimeArgs": ["--dir", "web", "dev"],
       "env": { "API_PROXY_TARGET": "http://localhost:8010" },
       "port": 5173
+    },
+    {
+      "name": "app",
+      "runtimeExecutable": ".venv/bin/uvicorn",
+      "runtimeArgs": ["api.main:app", "--port", "8020"],
+      "env": { "STATIC_DIR": "web/dist" },
+      "port": 8020,
+      "autoPort": false
     }
   ]
 }

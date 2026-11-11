@@ -7,11 +7,13 @@ import os
 import statistics
 from dataclasses import dataclass
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from api.db import db
 from api.schemas import (
@@ -403,3 +405,43 @@ def campaigns(
         )
         for c, sm, ch, s, cv, cr, r, rps in rows
     ]
+
+
+# --- built frontend (single-service deploys) ------------------------------------
+
+def mount_frontend(application: FastAPI, static_dir: Path) -> bool:
+    """Serve the built React app from the same origin as the API.
+
+    Hashed bundles under /assets are cached for a year; every other non-API
+    path returns the file if it exists, else index.html (client-side routes).
+    Registered last, so /api/*, /docs and /openapi.json keep precedence.
+    """
+    index = static_dir / "index.html"
+    if not index.is_file():
+        return False
+    assets = static_dir / "assets"
+    if assets.is_dir():
+        application.mount("/assets", ImmutableStaticFiles(directory=assets), name="assets")
+
+    @application.get("/{path:path}", include_in_schema=False)
+    def spa(path: str) -> FileResponse:
+        if path == "api" or path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not found")
+        candidate = (static_dir / path).resolve()
+        if path and candidate.is_file() and candidate.is_relative_to(static_dir.resolve()):
+            return FileResponse(candidate)
+        return FileResponse(index, headers={"Cache-Control": "no-cache"})
+
+    return True
+
+
+class ImmutableStaticFiles(StaticFiles):
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
+if os.environ.get("STATIC_DIR"):
+    mount_frontend(app, Path(os.environ["STATIC_DIR"]))
